@@ -1,5 +1,13 @@
 package config
 
+import (
+	"log"
+	"os"
+	"path/filepath"
+
+	"github.com/ilyakaznacheev/cleanenv"
+)
+
 type Config struct {
 	Env         string `yaml:"env"`
 	StoragePath string `yaml:"storage_path"`
@@ -33,4 +41,21 @@ type Config struct {
 
 func NewConfig() *Config {
 	return &Config{}
+}
+
+func MustLoad() *Config {
+	// Указываем полный путь к конфигурационному файлу
+	configPath := filepath.Join("../config/config.yaml")
+
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		log.Fatalf("config file %s does not exist", configPath)
+	}
+
+	var cfg Config
+
+	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
+		log.Fatalf("error reading config file: %s", err)
+	}
+
+	return &cfg
 }
