@@ -1,0 +1,30 @@
+volumes:
+  redis-data: 
+  db-data:
+
+services:
+  app-redis:
+    image: redis:latest
+    environment:
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--port", "6739"]
+    
+  app-db:
+    image: postgres:14.5-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+
+    ports:
+      - 5431:5432
