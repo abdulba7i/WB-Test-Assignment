@@ -17,6 +17,18 @@ type Config struct {
 		Password string `yaml:"password"`
 		Dbname   string `yaml:"dbname"`
 	}
+	Redis struct {
+		Host     string `yaml:"host"`
+		Port     string `yaml:"port"`
+		User     string `yaml:"user"`
+		Password string `yaml:"password"`
+	}
+	Nats struct {
+		Host     string `yaml:"host"`
+		Port     string `yaml:"port"`
+		User     string `yaml:"user"`
+		Password string `yaml:"password"`
+	}
 }
 
 func NewConfig() *Config {
