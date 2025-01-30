@@ -11,36 +11,37 @@ import (
 type Config struct {
 	Env         string `yaml:"env"`
 	StoragePath string `yaml:"storage_path"`
-	HTTPServer  struct {
-		Address     string `yaml:"address"`
-		Timeout     string `yaml:"timeout"`
-		IdleTimeout string `yaml:"idle_timeout"`
-		User        string `yaml:"user"`
-		Password    string `yaml:"password"`
-	}
-	Database struct {
-		Host     string `yaml:"host"`
-		Port     string `yaml:"port"`
-		User     string `yaml:"user"`
-		Password string `yaml:"password"`
-		Dbname   string `yaml:"dbname"`
-	}
-	Redis struct {
-		Host     string `yaml:"host"`
-		Port     string `yaml:"port"`
-		User     string `yaml:"user"`
-		Password string `yaml:"password"`
-	}
-	Nats struct {
-		Host     string `yaml:"host"`
-		Port     string `yaml:"port"`
-		User     string `yaml:"user"`
-		Password string `yaml:"password"`
-	}
-}
 
-func NewConfig() *Config {
-	return &Config{}
+	HTTPServer HTTPServer `yaml:"http_server"`
+	Database   Database   `yaml:"database"`
+
+	// TODO: Add the remaining structures
+}
+type HTTPServer struct {
+	Address     string `yaml:"address"`
+	Timeout     string `yaml:"timeout"`
+	IdleTimeout string `yaml:"idle_timeout"`
+	User        string `yaml:"user"`
+	Password    string `yaml:"password"`
+}
+type Database struct {
+	Host     string `yaml:"host"`
+	Port     string `yaml:"port"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+	Dbname   string `yaml:"dbname"`
+}
+type Redis struct {
+	Host     string `yaml:"host"`
+	Port     string `yaml:"port"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+}
+type Nats struct {
+	Host     string `yaml:"host"`
+	Port     string `yaml:"port"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
 }
 
 func MustLoad() *Config {
