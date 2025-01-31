@@ -46,7 +46,7 @@ type Nats struct {
 
 func MustLoad() *Config {
 	// Указываем полный путь к конфигурационному файлу
-	configPath := filepath.Join("../config/config.yaml")
+	configPath := filepath.Join("./config/config.yaml")
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		log.Fatalf("config file %s does not exist", configPath)

@@ -9,8 +9,8 @@ http_server:
 
 database:
   host : "127.0.0.1"
-  port : "5432"
+  port : "5431"
   user : "postgres"
   password : "postgres"
-  dbname : "postgres"]
+  dbname : "fsm"
   

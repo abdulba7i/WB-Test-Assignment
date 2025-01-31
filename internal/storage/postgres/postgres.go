@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+
+	_ "github.com/lib/pq"
 )
 
 type Storage struct {
@@ -30,27 +32,60 @@ func New(c DB) (*Storage, error) {
 	// created table
 	stmt1 := `
 	CREATE TABLE IF NOT EXISTS orders (
-    order_uid VARCHAR(255) PRIMARY KEY,
-    track_number VARCHAR(255) NOT NULL,
-    entry VARCHAR(255) NOT NULL,
-    delivery_name VARCHAR(255) NOT NULL,
-    delivery_phone VARCHAR(20) NOT NULL,
-    delivery_zip VARCHAR(20) NOT NULL,
-    delivery_city VARCHAR(255) NOT NULL,
-    delivery_address VARCHAR(255) NOT NULL,
-    delivery_region VARCHAR(255) NOT NULL,
-    delivery_email VARCHAR(255) NOT NULL,
-    payment_transaction VARCHAR(255) NOT NULL,
-    payment_request_id VARCHAR(255) NOT NULL,
-    payment_currency VARCHAR(10) NOT NULL,
-    payment_provider VARCHAR(50) NOT NULL,
-    payment_amount INTEGER NOT NULL,
-    payment_bank VARCHAR(255) NOT NULL,
-    payment_delivery_cost INTEGER NOT NULL,
-    payment_goods_total INTEGER NOT NULL,
-    payment_custom_fee INTEGER NOT NULL,
-    date_created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP);`
+		order_uid VARCHAR(255) PRIMARY KEY,
+		track_number VARCHAR(255) NOT NULL,
+		entry VARCHAR(255) NOT NULL,
+		delivery_id INTEGER NOT NULL,
+		payment_id INTEGER NOT NULL,
+		locale VARCHAR(255) NOT NULL,
+		internal_signature VARCHAR(255) NOT NULL,
+		customer_id VARCHAR(255) NOT NULL,
+		delivery_service VARCHAR(255) NOT NULL,
+		shardkey VARCHAR(255) NOT NULL,
+		sm_id INTEGER NOT NULL,
+		oof_shard VARCHAR(255) NOT NULL,
+		date_created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+	);
+	
+	CREATE TABLE IF NOT EXISTS delivery (
+		id SERIAL PRIMARY KEY,
+		name VARCHAR(255) NOT NULL,
+		phone VARCHAR(20) NOT NULL,
+		zip VARCHAR(20) NOT NULL,
+		city VARCHAR(255) NOT NULL,
+		address VARCHAR(255) NOT NULL,
+		region VARCHAR(255) NOT NULL,
+		email VARCHAR(255) NOT NULL
+	);
+
+	CREATE TABLE IF NOT EXISTS payment (
+		id SERIAL PRIMARY KEY,
+		transaction VARCHAR(255) NOT NULL,
+		request_id VARCHAR(255) NOT NULL,
+		currency VARCHAR(10) NOT NULL,
+		provider VARCHAR(50) NOT NULL,
+		amount INTEGER NOT NULL,
+		bank VARCHAR(255) NOT NULL,
+		delivery_cost INTEGER NOT NULL,
+		goods_total INTEGER NOT NULL,
+		custom_fee INTEGER NOT NULL
+	);
+
+	CREATE TABLE IF NOT EXISTS items (
+		id SERIAL PRIMARY KEY,
+		chrt_id INTEGER NOT NULL,
+		track_number VARCHAR(255) NOT NULL,
+		price INTEGER NOT NULL,
+		rid VARCHAR(255) NOT NULL,
+		name VARCHAR(255) NOT NULL,
+		sale INTEGER NOT NULL,
+		size VARCHAR(255) NOT NULL,
+		total_price INTEGER NOT NULL,
+		nm_id INTEGER NOT NULL,
+		brand VARCHAR(255) NOT NULL,
+		status INTEGER NOT NULL
+	);
+	`
 
 	_, err = db.Exec(stmt1)
 	if err != nil {
@@ -59,11 +94,10 @@ func New(c DB) (*Storage, error) {
 
 	// created index
 	stmt := `
-	CREATE INDEX IF NOT EXISTS idx_track_number ON orders(track_number);
-	CREATE INDEX IF NOT EXISTS idx_date_created ON orders(date_created);
-	CREATE INDEX IF NOT EXISTS idx_customer_id ON orders(customer_id);
-	CREATE INDEX IF NOT EXISTS idx_payment_transaction ON orders(payment_transaction);
-	CREATE INDEX IF NOT EXISTS idx_delivery_phone ON orders(delivery_phone);
+	CREATE INDEX IF NOT EXISTS order_uid_idx ON orders (order_uid);
+	CREATE INDEX IF NOT EXISTS delivery_id_idx ON orders (delivery_id);
+	CREATE INDEX IF NOT EXISTS payment_id_idx ON orders (payment_id);
+	CREATE INDEX IF NOT EXISTS items_idx ON items (rid);
 	`
 
 	_, err = db.Exec(stmt)
