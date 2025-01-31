@@ -20,6 +20,7 @@ func main() {
 
 	nc.Consume("l0wb", func(msg *stan.Msg) {
 		log.Info("got message", slog.String("data", string(msg.Data)))
+		// AddOrder(msg.Data)
 		msg.Ack()
 	})
 

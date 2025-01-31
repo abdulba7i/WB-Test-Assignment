@@ -102,3 +102,11 @@ func New(c config.Database) (*Storage, error) {
 
 	return &Storage{db: db}, nil
 }
+
+func AddOrder(data interface{}) error {
+	return nil
+}
+
+func GetOrderById(id string) (interface{}, error) {
+	return nil, nil
+}
