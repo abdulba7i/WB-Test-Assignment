@@ -29,8 +29,15 @@ services:
     ports:
       - 5431:5432
       
-  nats:
-    image: nats
+  nats-streaming:
+    image: nats-streaming
     ports:
-      - "8222:8222"
-    command: "--cluster_name NATS --cluster nats://0.0.0.0:6222 --http_port 8222 "
+      - "4222:4222"
+    command: [
+      "--cluster_id", "test-cluster",  
+      "--store", "file",               
+      "--dir", "/data",                 
+      "--max_msgs", "1000000",          
+      "--max_bytes", "1GB",             
+      "--max_age", "24h"                
+    ]

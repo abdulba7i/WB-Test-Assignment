@@ -17,7 +17,7 @@ func main() {
 		slog.String("version", "123"),
 	)
 	log.Debug("debug messages are enabled")
-	_, err := postgres.New(postgres.DB(cfg.Database))
+	_, err := postgres.New(cfg.Database)
 
 	if err != nil {
 		log.Error("failed to init storage", "error: %v", err)

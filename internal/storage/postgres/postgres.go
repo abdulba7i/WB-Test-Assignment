@@ -5,21 +5,16 @@ import (
 	"fmt"
 	"log"
 
+	"l0wb/internal/config"
+
 	_ "github.com/lib/pq"
 )
 
 type Storage struct {
 	db *sql.DB
 }
-type DB struct {
-	Host     string `yaml:"host"`
-	Port     string `yaml:"port"`
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
-	Dbname   string `yaml:"dbname"`
-}
 
-func New(c DB) (*Storage, error) {
+func New(c config.Database) (*Storage, error) {
 	const op = "storage.postgre.New"
 
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", c.Host, c.Port, c.User, c.Password, c.Dbname)

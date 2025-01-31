@@ -12,8 +12,10 @@ type Config struct {
 	Env         string `yaml:"env"`
 	StoragePath string `yaml:"storage_path"`
 
-	HTTPServer HTTPServer `yaml:"http_server"`
-	Database   Database   `yaml:"database"`
+	HTTPServer    HTTPServer    `yaml:"http_server"`
+	Database      Database      `yaml:"database"`
+	Redis         Redis         `yaml:"redis"`
+	NatsStreaming NatsStreaming `yaml:"nats-streaming"`
 
 	// TODO: Add the remaining structures
 }
@@ -37,11 +39,12 @@ type Redis struct {
 	User     string `yaml:"user"`
 	Password string `yaml:"password"`
 }
-type Nats struct {
-	Host     string `yaml:"host"`
-	Port     string `yaml:"port"`
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
+type NatsStreaming struct {
+	Host      string `yaml:"host"`
+	Port      string `yaml:"port"`
+	User      string `yaml:"user"`
+	Password  string `yaml:"password"`
+	ClusterID string `yaml:"cluster_id"`
 }
 
 func MustLoad() *Config {

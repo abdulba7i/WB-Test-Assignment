@@ -7,10 +7,22 @@ http_server:
   user: "abdu1bari"
   password: "7721"
 
+nats-streaming:
+  host : "127.0.0.1"
+  port : "4222"
+  user : "nats"
+  password : "nats"
+  cluster_id : "test-cluster"
+
 database:
   host : "127.0.0.1"
   port : "5431"
   user : "postgres"
   password : "postgres"
   dbname : "fsm"
-  
+
+redis:
+  host : "127.0.0.1"
+  port : "6739"
+  user : "redis"
+  password : "redis"
