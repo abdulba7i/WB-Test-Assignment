@@ -1,122 +1,75 @@
 package postgres
 
-func Save()
+import (
+	"database/sql"
+	"fmt"
+	"log"
+)
 
-// import (
-// 	"context"
-// 	"database/sql"
-// 	"errors"
-// 	"fmt"
-// 	"time"
-// 	"url-shortener/internal/storage"
+type Storage struct {
+	db *sql.DB
+}
+type DB struct {
+	Host     string `yaml:"host"`
+	Port     string `yaml:"port"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+	Dbname   string `yaml:"dbname"`
+}
 
-// 	"github.com/jackc/pgx/v5/pgconn"
-// 	_ "github.com/lib/pq"
-// )
+func New(c DB) (*Storage, error) {
+	const op = "storage.postgre.New"
 
-// type Storage struct {
-// 	db *sql.DB
-// }
+	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", c.Host, c.Port, c.User, c.Password, c.Dbname)
 
-// type DB struct {
-// 	Host     string `yaml:"host"`
-// 	Port     string `yaml:"port"`
-// 	User     string `yaml:"user"`
-// 	Password string `yaml:"password"`
-// 	Dbname   string `yaml:"dbname"`
-// }
+	db, err := sql.Open("postgres", psqlInfo)
+	if err != nil {
+		return nil, fmt.Errorf("%s, %w", op, err)
+	}
 
-// func New(c DB) (*Storage, error) {
-// 	const op = "storage.postgre.New"
+	// created table
+	stmt1 := `
+	CREATE TABLE IF NOT EXISTS orders (
+    order_uid VARCHAR(255) PRIMARY KEY,
+    track_number VARCHAR(255) NOT NULL,
+    entry VARCHAR(255) NOT NULL,
+    delivery_name VARCHAR(255) NOT NULL,
+    delivery_phone VARCHAR(20) NOT NULL,
+    delivery_zip VARCHAR(20) NOT NULL,
+    delivery_city VARCHAR(255) NOT NULL,
+    delivery_address VARCHAR(255) NOT NULL,
+    delivery_region VARCHAR(255) NOT NULL,
+    delivery_email VARCHAR(255) NOT NULL,
+    payment_transaction VARCHAR(255) NOT NULL,
+    payment_request_id VARCHAR(255) NOT NULL,
+    payment_currency VARCHAR(10) NOT NULL,
+    payment_provider VARCHAR(50) NOT NULL,
+    payment_amount INTEGER NOT NULL,
+    payment_bank VARCHAR(255) NOT NULL,
+    payment_delivery_cost INTEGER NOT NULL,
+    payment_goods_total INTEGER NOT NULL,
+    payment_custom_fee INTEGER NOT NULL,
+    date_created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP);`
 
-// 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", c.Host, c.Port, c.User, c.Password, c.Dbname)
+	_, err = db.Exec(stmt1)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
 
-// 	db, err := sql.Open("postgres", psqlInfo)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("%s: %w", op, err)
-// 	}
+	// created index
+	stmt := `
+	CREATE INDEX IF NOT EXISTS idx_track_number ON orders(track_number);
+	CREATE INDEX IF NOT EXISTS idx_date_created ON orders(date_created);
+	CREATE INDEX IF NOT EXISTS idx_customer_id ON orders(customer_id);
+	CREATE INDEX IF NOT EXISTS idx_payment_transaction ON orders(payment_transaction);
+	CREATE INDEX IF NOT EXISTS idx_delivery_phone ON orders(delivery_phone);
+	`
 
-// 	// Создание таблицы
-// 	stmt1 := `
-// 	CREATE TABLE IF NOT EXISTS url (
-// 		id SERIAL PRIMARY KEY,
-// 		alias TEXT NOT NULL UNIQUE,
-// 		url TEXT NOT NULL
-// 	);`
-// 	_, err = db.Exec(stmt1)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("%s: %w", op, err)
-// 	}
+	_, err = db.Exec(stmt)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-// 	// Создание индекса
-// 	stmt2 := `
-// 	CREATE INDEX IF NOT EXISTS idx_alias ON url(alias);`
-// 	_, err = db.Exec(stmt2)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("%s: %w", op, err)
-// 	}
-
-// 	return &Storage{db: db}, nil
-// }
-
-// func (s *Storage) SaveUrl(urlToSave string, alias string) (int64, error) {
-// 	const op = "storage.postgre.SaveUrl"
-
-// 	var id int64
-// 	query := "INSERT INTO url(url, alias) VALUES($1, $2) RETURNING id"
-
-// 	err := s.db.QueryRow(query, urlToSave, alias).Scan(&id)
-// 	if err != nil {
-// 		var pgErr *pgconn.PgError
-// 		if errors.As(err, &pgErr) {
-// 			if pgErr.Code == "23505" { // Unique constraint violation
-// 				return 0, fmt.Errorf("%s: %w", op, storage.ErrUrlExists)
-// 			}
-// 		}
-
-// 		return 0, fmt.Errorf("%s: %w", op, err)
-// 	}
-
-// 	// LastInsertId() - этот метод не работает с PostgreSQL
-// 	return id, nil
-// }
-
-// func (s *Storage) GetUrl(alias string) (string, error) {
-// 	const op = "storage.postgre.GetUrl"
-
-// 	var url string
-// 	query := "SELECT url FROM url WHERE alias = $1"
-
-// 	err := s.db.QueryRow(query, alias).Scan(&url)
-// 	if err != nil {
-// 		if errors.Is(err, sql.ErrNoRows) {
-// 			return "", fmt.Errorf("%s: %w", op, storage.ErrUrlNotFound)
-// 		}
-// 		return "", fmt.Errorf("%s: %w", op, err)
-// 	}
-
-// 	return url, nil
-// }
-
-// func (s *Storage) DeleteUrl(alias string) error {
-// 	const op = "storage.postgre.DeleteUrl"
-
-// 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-// 	defer cancel()
-
-// 	res, err := s.db.ExecContext(ctx, "DELETE FROM url WHERE alias = $1", alias)
-// 	if err != nil {
-// 		return fmt.Errorf("%s: %w", op, err)
-// 	}
-
-// 	rowsAffected, err := res.RowsAffected()
-// 	if err != nil {
-// 		return fmt.Errorf("%s: %w", op, err)
-// 	}
-
-// 	if rowsAffected == 0 {
-// 		return fmt.Errorf("%s: %w", op, storage.ErrUrlNotFound)
-// 	}
-
-// 	return nil
-// }
+	return &Storage{db: db}, nil
+}

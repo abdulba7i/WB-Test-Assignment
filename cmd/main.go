@@ -7,3 +7,8 @@ import (
 func main() {
 	/* cfg */ _ = config.MustLoad()
 }
+
+// func setupLogger(env string) *slog.Logger {
+// 	var log *slog.Logger
+
+// }
