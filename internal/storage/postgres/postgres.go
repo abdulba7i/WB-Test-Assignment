@@ -2,16 +2,72 @@ package postgres
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 
 	"l0wb/internal/config"
+	"l0wb/internal/storage"
 
 	_ "github.com/lib/pq"
 )
 
 type Storage struct {
 	db *sql.DB
+}
+
+type Order struct {
+	OrderUID          string   `json:"order_uid"`
+	TrackNumber       string   `json:"track_number"`
+	Entry             string   `json:"entry"`
+	Delivery          Delivery `json:"delivery"`
+	Payment           Payment  `json:"payment"`
+	Items             []Item   `json:"items"`
+	Locale            string   `json:"locale"`
+	InternalSignature string   `json:"internal_signature"`
+	CustomerID        string   `json:"customer_id"`
+	DeliveryService   string   `json:"delivery_service"`
+	ShardKey          string   `json:"shardkey"`
+	SMID              int      `json:"sm_id"`
+	DateCreated       string   `json:"date_created"`
+	OOFShard          string   `json:"oof_shard"`
+}
+
+type Delivery struct {
+	Name    string `json:"name"`
+	Phone   string `json:"phone"`
+	Zip     string `json:"zip"`
+	City    string `json:"city"`
+	Address string `json:"address"`
+	Region  string `json:"region"`
+	Email   string `json:"email"`
+}
+
+type Payment struct {
+	Transaction  string `json:"transaction"`
+	RequestID    string `json:"request_id"`
+	Currency     string `json:"currency"`
+	Provider     string `json:"provider"`
+	Amount       int    `json:"amount"`
+	PaymentDT    int64  `json:"payment_dt"`
+	Bank         string `json:"bank"`
+	DeliveryCost int    `json:"delivery_cost"`
+	GoodsTotal   int    `json:"goods_total"`
+	CustomFee    int    `json:"custom_fee"`
+}
+
+type Item struct {
+	ChrtID      int    `json:"chrt_id"`
+	TrackNumber string `json:"track_number"`
+	Price       int    `json:"price"`
+	RID         string `json:"rid"`
+	Name        string `json:"name"`
+	Sale        int    `json:"sale"`
+	Size        string `json:"size"`
+	TotalPrice  int    `json:"total_price"`
+	NMID        int    `json:"nm_id"`
+	Brand       string `json:"brand"`
+	Status      int    `json:"status"`
 }
 
 func New(c config.Database) (*Storage, error) {
@@ -67,6 +123,7 @@ func New(c config.Database) (*Storage, error) {
 	);
 
 	CREATE TABLE IF NOT EXISTS items (
+		order_uid VARCHAR(255) NOT NULL,
 		id SERIAL PRIMARY KEY,
 		chrt_id INTEGER NOT NULL,
 		track_number VARCHAR(255) NOT NULL,
@@ -103,10 +160,90 @@ func New(c config.Database) (*Storage, error) {
 	return &Storage{db: db}, nil
 }
 
-func AddOrder(data interface{}) error {
+func (s *Storage) AddDelivery(delivery Delivery) (int64, error) {
+	const op = "storage.postgres.AddDelivery"
+
+	query := "INSERT INTO delivery (name, phone, zip, city, address, region, email) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id"
+	result, err := s.db.Exec(query, delivery.Name, delivery.Phone, delivery.Zip, delivery.City, delivery.Address, delivery.Region, delivery.Email)
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", op, err)
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return id, nil
+}
+
+func (s *Storage) AddPayment(payment Payment) (int64, error) {
+	const op = "storage.postgres.AddDelivery"
+
+	query := "INSERT INTO payment (transaction, request_id, currency, provider, amount, bank, delivery_cost, goods_total, custom_fee) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id"
+	result, err := s.db.Exec(query, payment.Transaction, payment.RequestID, payment.Currency, payment.Provider, payment.Amount, payment.Bank, payment.DeliveryCost, payment.GoodsTotal, payment.CustomFee)
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", op, err)
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return id, nil
+}
+
+func (s *Storage) AddItems(order_uid string, items []Item) error {
+	const op = "storage.postgres.AddItems"
+
+	query := "INSERT INTO items (order_uid, chrt_id, track_number, price, rid, name, sale, size, total_price, nm_id, brand, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)"
+	for _, item := range items {
+		_, err := s.db.Exec(query, order_uid, item.ChrtID, item.TrackNumber, item.Price, item.RID, item.Name, item.Sale, item.Size, item.TotalPrice, item.NMID, item.Brand, item.Status)
+		if err != nil {
+			return fmt.Errorf("%s: %w", op, err)
+		}
+	}
+
 	return nil
 }
 
-func GetOrderById(id string) (interface{}, error) {
-	return nil, nil
+func (s *Storage) AddOrder(ordr Order) error {
+	const op = "storage.postgres.AddOrder"
+
+	idDvr, _ := s.AddDelivery(ordr.Delivery)
+	idPymnt, err := s.AddPayment(ordr.Payment)
+	err = s.AddItems(ordr.OrderUID, ordr.Items)
+
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	query := `
+	INSERT INTO orders (order_uid, track_number, entry, delivery_id, payment_id, locale, internal_signature, customer_id, delivery_service, shardkey, sm_id, oof_shard)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+	`
+
+	_, err = s.db.Exec(query, ordr.OrderUID, ordr.TrackNumber, ordr.Entry, idDvr, idPymnt, ordr.Locale, ordr.InternalSignature, ordr.CustomerID, ordr.DeliveryService, ordr.ShardKey, ordr.SMID, ordr.OOFShard)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	return nil
+}
+
+func (s *Storage) GetOrderById(id string) (Order, error) {
+	const op = "storage.postgres.GetOrderById"
+
+	query := `SELECT * FROM orders WHERE order_uid = $1 JOIN delivery on orders.delivery_id = delivery.id join payment on orders.payment_id = payment.id JOIN items on orders.order_uid = items.order_uid`
+	var ordr Order
+
+	err := s.db.QueryRow(query, id).Scan(&ordr)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return Order{}, fmt.Errorf("%s: %w", op, storage.ErrUrlNotFound)
+		}
+		return Order{}, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return ordr, nil
 }
