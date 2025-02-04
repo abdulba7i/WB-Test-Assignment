@@ -42,8 +42,6 @@ import (
 	"github.com/labstack/gommon/log"
 )
 
-// Определим структуры, которые соответствуют твоему JSON
-
 func main() {
 	cfg := config.MustLoad()
 	nc, err := _nats.New(cfg.NatsStreaming, "1")
@@ -103,7 +101,6 @@ func main() {
 		OOFShard:          "1",
 	}
 
-	// Сериализуем структуру Order в JSON
 	orderData, err := json.Marshal(order)
 	if err != nil {
 		log.Fatal("failed to marshal order data:", err)
