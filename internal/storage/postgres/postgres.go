@@ -202,20 +202,26 @@ func (s *Storage) AddOrder(ordr Order) error {
 	var err error
 	const op = "storage.postgres.AddOrder"
 	tx, err := s.db.Begin()
-	defer tx.Rollback()
-
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	idDvr, errD := s.AddDelivery(ordr.Delivery)
-	if errD != nil {
-		return fmt.Errorf("%s: %w", op, errD)
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+
+	idDvr, err := s.AddDelivery(ordr.Delivery)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	idPymnt, errP := s.AddPayment(ordr.Payment)
-	if errP != nil {
-		return fmt.Errorf("%s: %w", op, errP)
+	idPymnt, err := s.AddPayment(ordr.Payment)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
 	}
 
 	query := `INSERT INTO orders (order_uid, track_number, entry, delivery_id, payment_id, locale, internal_signature, customer_id, delivery_service, shardkey, sm_id, oof_shard)
@@ -227,11 +233,10 @@ func (s *Storage) AddOrder(ordr Order) error {
 	}
 
 	// Теперь можно добавлять items, так как order_uid уже в orders
-	errI := s.AddItems(ordr.OrderUID, ordr.Items)
-	if errI != nil {
-		return fmt.Errorf("%s: %w", op, errI)
+	err = s.AddItems(ordr.OrderUID, ordr.Items)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
 	}
-	tx.Commit()
 
 	return nil
 }
