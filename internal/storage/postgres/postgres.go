@@ -160,36 +160,36 @@ func New(c config.Database) (*Storage, error) {
 	return &Storage{db: db}, nil
 }
 
-func (s *Storage) AddDelivery(delivery Delivery) (int64, error) {
+func (s *Storage) AddDelivery(tx *sql.Tx, delivery Delivery) (int64, error) {
 	const op = "storage.postgres.AddDelivery"
 
 	var id int64
 	query := "INSERT INTO delivery (name, phone, zip, city, address, region, email) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id"
-	err := s.db.QueryRow(query, delivery.Name, delivery.Phone, delivery.Zip, delivery.City, delivery.Address, delivery.Region, delivery.Email).Scan(&id)
+	err := tx.QueryRow(query, delivery.Name, delivery.Phone, delivery.Zip, delivery.City, delivery.Address, delivery.Region, delivery.Email).Scan(&id)
 	if err != nil {
 		return 0, fmt.Errorf("%s: %w", op, err)
 	}
 	return id, nil
 }
 
-func (s *Storage) AddPayment(payment Payment) (int64, error) {
+func (s *Storage) AddPayment(tx *sql.Tx, payment Payment) (int64, error) {
 	const op = "storage.postgres.AddPayment"
 
 	var id int64
 	query := "INSERT INTO payment (transaction, request_id, currency, provider, amount, bank, delivery_cost, goods_total, custom_fee) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id"
-	err := s.db.QueryRow(query, payment.Transaction, payment.RequestID, payment.Currency, payment.Provider, payment.Amount, payment.Bank, payment.DeliveryCost, payment.GoodsTotal, payment.CustomFee).Scan(&id)
+	err := tx.QueryRow(query, payment.Transaction, payment.RequestID, payment.Currency, payment.Provider, payment.Amount, payment.Bank, payment.DeliveryCost, payment.GoodsTotal, payment.CustomFee).Scan(&id)
 	if err != nil {
 		return 0, fmt.Errorf("%s: %w", op, err)
 	}
 	return id, nil
 }
 
-func (s *Storage) AddItems(order_uid string, items []Item) error {
+func (s *Storage) AddItems(tx *sql.Tx, order_uid string, items []Item) error {
 	const op = "storage.postgres.AddItems"
 
 	query := "INSERT INTO items (order_uid, chrt_id, track_number, price, rid, name, sale, size, total_price, nm_id, brand, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)"
 	for _, item := range items {
-		err := s.db.QueryRow(query, order_uid, item.ChrtID, item.TrackNumber, item.Price, item.RID, item.Name, item.Sale, item.Size, item.TotalPrice, item.NMID, item.Brand, item.Status)
+		err := tx.QueryRow(query, order_uid, item.ChrtID, item.TrackNumber, item.Price, item.RID, item.Name, item.Sale, item.Size, item.TotalPrice, item.NMID, item.Brand, item.Status)
 		if err != nil {
 			return fmt.Errorf("%s: %w", op, err)
 		}
@@ -208,18 +208,20 @@ func (s *Storage) AddOrder(ordr Order) error {
 
 	defer func() {
 		if err != nil {
+			log.Println("ROllback")
 			tx.Rollback()
 		} else {
+			log.Println("Commit")
 			tx.Commit()
 		}
 	}()
 
-	idDvr, err := s.AddDelivery(ordr.Delivery)
+	idDvr, err := s.AddDelivery(tx, ordr.Delivery)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	idPymnt, err := s.AddPayment(ordr.Payment)
+	idPymnt, err := s.AddPayment(tx, ordr.Payment)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
@@ -227,13 +229,13 @@ func (s *Storage) AddOrder(ordr Order) error {
 	query := `INSERT INTO orders (order_uid, track_number, entry, delivery_id, payment_id, locale, internal_signature, customer_id, delivery_service, shardkey, sm_id, oof_shard)
 			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
 
-	_, err = s.db.Exec(query, ordr.OrderUID, ordr.TrackNumber, ordr.Entry, idDvr, idPymnt, ordr.Locale, ordr.InternalSignature, ordr.CustomerID, ordr.DeliveryService, ordr.ShardKey, ordr.SMID, ordr.OOFShard)
+	_, err = tx.Exec(query, ordr.OrderUID, ordr.TrackNumber, ordr.Entry, idDvr, idPymnt, ordr.Locale, ordr.InternalSignature, ordr.CustomerID, ordr.DeliveryService, ordr.ShardKey, ordr.SMID, ordr.OOFShard)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
 	// Теперь можно добавлять items, так как order_uid уже в orders
-	err = s.AddItems(ordr.OrderUID, ordr.Items)
+	err = s.AddItems(tx, ordr.OrderUID, ordr.Items)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
