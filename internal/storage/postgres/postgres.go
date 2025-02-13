@@ -2,12 +2,12 @@ package postgres
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 
 	"l0wb/internal/config"
-	"l0wb/internal/storage"
 
 	_ "github.com/lib/pq"
 )
@@ -248,16 +248,50 @@ func (s *Storage) AddOrder(ordr Order) error {
 func (s *Storage) GetOrderById(id string) (Order, error) {
 	const op = "storage.postgres.GetOrderById"
 
-	query := `SELECT * FROM orders WHERE order_uid = $1 JOIN delivery on orders.delivery_id = delivery.id join payment on orders.payment_id = payment.id JOIN items on orders.order_uid = items.order_uid`
-	var ordr Order
+	var order Order
+	var delivery Delivery
+	var payment Payment
+	var itemsJSON json.RawMessage
 
-	err := s.db.QueryRow(query, id).Scan(&ordr)
+	query := `
+		SELECT o.order_uid, o.track_number, o.entry, 
+		       d.name, d.phone, d.zip, d.city, d.address, d.region, d.email, 
+		       p.transaction, p.request_id, p.currency, p.provider, p.amount, 
+		       p.bank, p.delivery_cost, p.goods_total, p.custom_fee, 
+		       o.locale, o.internal_signature, o.customer_id, o.delivery_service, 
+		       o.shardkey, o.sm_id, o.date_created, o.oof_shard,
+		       COALESCE((SELECT json_agg(i) FROM items i WHERE i.order_uid = o.order_uid), '[]'::json) AS items
+		FROM orders o
+		JOIN delivery d ON o.delivery_id = d.id
+		JOIN payment p ON o.payment_id = p.id
+		WHERE o.order_uid = $1
+	`
+
+	err := s.db.QueryRow(query, id).Scan(
+		&order.OrderUID,
+		&order.TrackNumber,
+		&order.Entry,
+		&delivery.Name, &delivery.Phone, &delivery.Zip, &delivery.City, &delivery.Address, &delivery.Region, &delivery.Email,
+		&payment.Transaction, &payment.RequestID, &payment.Currency, &payment.Provider, &payment.Amount,
+		&payment.Bank, &payment.DeliveryCost, &payment.GoodsTotal, &payment.CustomFee,
+		&order.Locale, &order.InternalSignature, &order.CustomerID, &order.DeliveryService,
+		&order.ShardKey, &order.SMID, &order.DateCreated, &order.OOFShard,
+		&itemsJSON,
+	)
+
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return Order{}, fmt.Errorf("%s: %w", op, storage.ErrUrlNotFound)
+			return Order{}, fmt.Errorf("%s: order with id %s not found", op, id)
 		}
 		return Order{}, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return ordr, nil
+	order.Delivery = delivery
+	order.Payment = payment
+
+	if err := json.Unmarshal(itemsJSON, &order.Items); err != nil {
+		return Order{}, fmt.Errorf("%s: failed to parse items JSON: %w", op, err)
+	}
+
+	return order, nil
 }
