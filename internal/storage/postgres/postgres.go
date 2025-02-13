@@ -121,10 +121,10 @@ func New(c config.Database) (*Storage, error) {
 		goods_total INTEGER NOT NULL,
 		custom_fee INTEGER NOT NULL
 	);
-
+		
 	CREATE TABLE IF NOT EXISTS items (
-		order_uid VARCHAR(255) NOT NULL,
 		id SERIAL PRIMARY KEY,
+		order_uid VARCHAR(255) NOT NULL,
 		chrt_id INTEGER NOT NULL,
 		track_number VARCHAR(255) NOT NULL,
 		price INTEGER NOT NULL,
@@ -135,9 +135,11 @@ func New(c config.Database) (*Storage, error) {
 		total_price INTEGER NOT NULL,
 		nm_id INTEGER NOT NULL,
 		brand VARCHAR(255) NOT NULL,
-		status INTEGER NOT NULL
-	);
-	`
+		status INTEGER NOT NULL,
+		FOREIGN KEY (order_uid) REFERENCES orders(order_uid) ON DELETE CASCADE
+);
+
+`
 
 	_, err = db.Exec(stmt1)
 	if err != nil {
@@ -146,7 +148,7 @@ func New(c config.Database) (*Storage, error) {
 
 	// created index
 	stmt := `
-	CREATE INDEX IF NOT EXISTS order_uid_idx ON orders (order_uid);
+	CREATE INDEX IF NOT EXISTS order_uid_idx ON orders (order_uid); 
 	CREATE INDEX IF NOT EXISTS delivery_id_idx ON orders (delivery_id);
 	CREATE INDEX IF NOT EXISTS payment_id_idx ON orders (payment_id);
 	CREATE INDEX IF NOT EXISTS items_idx ON items (rid);
@@ -189,7 +191,7 @@ func (s *Storage) AddItems(tx *sql.Tx, order_uid string, items []Item) error {
 
 	query := "INSERT INTO items (order_uid, chrt_id, track_number, price, rid, name, sale, size, total_price, nm_id, brand, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)"
 	for _, item := range items {
-		err := tx.QueryRow(query, order_uid, item.ChrtID, item.TrackNumber, item.Price, item.RID, item.Name, item.Sale, item.Size, item.TotalPrice, item.NMID, item.Brand, item.Status)
+		_, err := tx.Exec(query, order_uid, item.ChrtID, item.TrackNumber, item.Price, item.RID, item.Name, item.Sale, item.Size, item.TotalPrice, item.NMID, item.Brand, item.Status)
 		if err != nil {
 			return fmt.Errorf("%s: %w", op, err)
 		}
