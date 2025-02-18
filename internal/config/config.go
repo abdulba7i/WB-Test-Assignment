@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
@@ -20,11 +21,11 @@ type Config struct {
 	// TODO: Add the remaining structures
 }
 type HTTPServer struct {
-	Address     string `yaml:"address"`
-	Timeout     string `yaml:"timeout"`
-	IdleTimeout string `yaml:"idle_timeout"`
-	User        string `yaml:"user"`
-	Password    string `yaml:"password"`
+	Address     string        `yaml:"address"`
+	Timeout     time.Duration `yaml:"timeout"`
+	IdleTimeout time.Duration `yaml:"idle_timeout"`
+	User        string        `yaml:"user"`
+	Password    string        `yaml:"password"`
 }
 type Database struct {
 	Host     string `yaml:"host"`

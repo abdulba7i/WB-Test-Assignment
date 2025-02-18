@@ -2,6 +2,7 @@ package order
 
 import (
 	"errors"
+	"log/slog"
 
 	resp "l0wb/internal/lib/api/response"
 	"l0wb/internal/storage"
@@ -25,7 +26,7 @@ type ORDERGetter interface {
 	GetOrderById(id string) (postgres.Order, error)
 }
 
-func GetOrder(id string, OrderGetter ORDERGetter) http.HandlerFunc {
+func GetOrder(logger *slog.Logger, id string, OrderGetter ORDERGetter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// const op = "handlers.Get.GetOrder"
 
