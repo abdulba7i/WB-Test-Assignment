@@ -54,6 +54,6 @@ func GetOrder(logger *slog.Logger, id string, OrderGetter ORDERGetter) http.Hand
 			return
 		}
 
-		http.Redirect(w, r, order.TrackNumber, http.StatusSeeOther)
+		render.JSON(w, r, Response{Response: *resp.OK(), Order: order})
 	}
 }

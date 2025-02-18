@@ -5,6 +5,7 @@ import (
 	"log/slog"
 
 	"l0wb/internal/config"
+	"l0wb/internal/storage/cache"
 	"l0wb/internal/storage/postgres"
 	_nats "l0wb/pkg/nats"
 
@@ -17,6 +18,7 @@ func main() {
 	nc, err := _nats.New(cfg.NatsStreaming, "2")
 
 	storage, err := postgres.New(cfg.Database)
+	redis := cache.New(cfg.Redis)
 
 	if err != nil {
 		log.Fatal(err)
@@ -29,12 +31,18 @@ func main() {
 		var order postgres.Order
 		err := json.Unmarshal(msg.Data, &order)
 		if err != nil {
-			log.Fatal("failed to unmarshal msg data:", err)
-			return
+			log.Error("failed to unmarshal msg data:", err)
 		}
 
 		// Вызываем метод добавления заказа в БД
-		_ = storage.AddOrder(order)
+		err = storage.AddOrder(order)
+		if err != nil {
+			log.Error("failed add order	to DB:", err)
+		}
+		err = redis.Set(order.OrderUID, order)
+		if err != nil {
+			log.Error("failed add order to Redis:", err)
+		}
 
 		// Подтверждаем получение сообщения
 		msg.Ack()

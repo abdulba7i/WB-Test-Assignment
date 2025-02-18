@@ -1,7 +1,7 @@
 env: "local" # local, dev, prod
 # storage_path: "./storage.db"
 http_server:
-  address: "0.0.0.0:8084"
+  address: "0.0.0.0:8000"
   timeout: 10s
   idle_timeout: 60s
   user: "abdu1bari"
@@ -19,10 +19,10 @@ database:
   port : "5431"
   user : "postgres"
   password : "postgres"
-  dbname : "fsm"
+  dbname : "l0"
 
 redis:
   host : "127.0.0.1"
-  port : "6739"
-  user : "redis"
-  password : "redis"
+  port : "6378"
+  user : ""
+  password : ""

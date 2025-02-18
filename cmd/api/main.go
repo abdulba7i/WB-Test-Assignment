@@ -3,7 +3,9 @@ package main
 import (
 	"l0wb/internal/config"
 	"l0wb/internal/http-server/handlers/order"
+	"l0wb/internal/storage/cache"
 	"l0wb/internal/storage/postgres"
+	"l0wb/internal/storage/services"
 	"log/slog"
 	"net/http"
 	"os"
@@ -31,6 +33,10 @@ func main() {
 	)
 
 	storage, err := postgres.New(cfg.Database)
+	redis := cache.New(cfg.Redis)
+
+	order_service := services.New(*storage, *redis)
+
 	if err != nil {
 		logger.Error("failed to init storage", slog.Any("error", err))
 		os.Exit(1)
@@ -59,10 +65,7 @@ func main() {
 	router.Use(middleware.URLFormat)
 
 	router.Route("/order", func(r chi.Router) {
-		// r.Use(middleware.BasicAuth("lo-wb", map[string]string{
-		// cfg.HTTPServer.User: cfg.HTTPServer.Password,
-		// }))
-		r.Get("/{id}", order.GetOrder(log, id, storage))
+		r.Get("/{id}", order.GetOrder(log, id, order_service))
 	})
 
 	log.Info("starting server", slog.String("addres", cfg.HTTPServer.Address))
@@ -76,7 +79,7 @@ func main() {
 	}
 
 	if err := srv.ListenAndServe(); err != nil {
-		log.Error("failed to start server") // к выводу можно ещё прикрутить --- "error: %v", sl.Err(err)
+		log.Error("failed to start server")
 		os.Exit(1)
 	}
 

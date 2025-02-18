@@ -4,13 +4,12 @@ volumes:
 
 services:
   app-redis:
-    image: redis:latest
+    image: redis
     environment:
-      REDIS_HOST: ${REDIS_HOST}
-      REDIS_PORT: ${REDIS_PORT}
+      - REDIS_PASSWORD=redis      
     ports:
-      - "6379:6379"
-    command: ["redis-server", "--port", "6739"]
+      - "6378:6379"
+    # command: ["redis-server", "--port", "6739"]
     
   app-db:
     image: postgres:14.5-alpine
