@@ -9,6 +9,7 @@ import (
 	"l0wb/internal/storage/postgres"
 	"net/http"
 
+	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
 )
 
@@ -26,31 +27,20 @@ type ORDERGetter interface {
 	GetOrderById(id string) (postgres.Order, error)
 }
 
-func GetOrder(logger *slog.Logger, id string, OrderGetter ORDERGetter) http.HandlerFunc {
+func GetOrder(logger *slog.Logger, OrderGetter ORDERGetter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// const op = "handlers.Get.GetOrder"
-
-		// log := log.With(
-		// 	// slog.String("op", op),
-		// 	slog.String("request_id", middleware.GetReqID(r.Context())),
-		// )
+		id := chi.URLParam(r, "id")
 
 		var order postgres.Order
 		order, err := OrderGetter.GetOrderById(id)
 
 		if errors.Is(err, storage.ErrUrlNotFound) {
-			// log.Info("url not found", "alias", id)
-
 			render.JSON(w, r, "not found")
-
 			return
 		}
 
 		if err != nil {
-			// log.Error("failed to get url", *sl.Err(err))
-
 			render.JSON(w, r, resp.Error("intertanl error"))
-
 			return
 		}
 

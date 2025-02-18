@@ -21,7 +21,7 @@ const (
 )
 
 func main() {
-	id := "b563feb7b2b84b6test"
+	// id := "b563feb7b2b84b6test"
 	cfg := config.MustLoad()
 
 	log := setupLogger(cfg.Env)
@@ -42,30 +42,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	// result, err := storage.GetOrderById("b563feb7b2b84b6test")
-	// if err != nil {
-	// 	logger.Error("failed to get order", slog.Any("error", err))
-	// 	os.Exit(1)
-	// }
-
-	// jsonOrder, err := json.MarshalIndent(result, "", "  ")
-	// if err != nil {
-	// 	logger.Error("failed to serialize order", slog.Any("error", err))
-	// 	os.Exit(1)
-	// }
-
-	// logger.Info("retrieved order", slog.String("order", string(jsonOrder)))
-
 	router := chi.NewRouter()
 
 	router.Use(middleware.RequestID)
 	router.Use(middleware.Logger)
-	// router.Use(mwLogger.New(log))
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
 
 	router.Route("/order", func(r chi.Router) {
-		r.Get("/{id}", order.GetOrder(log, id, order_service))
+		r.Get("/{id}", order.GetOrder(log, order_service))
 	})
 
 	log.Info("starting server", slog.String("addres", cfg.HTTPServer.Address))
