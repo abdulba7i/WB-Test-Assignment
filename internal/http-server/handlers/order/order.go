@@ -3,7 +3,6 @@ package order
 import (
 	"errors"
 
-	// resp "l0/internal/lib/api/response"
 	resp "l0wb/internal/lib/api/response"
 	"l0wb/internal/storage"
 	"l0wb/internal/storage/postgres"
@@ -18,7 +17,7 @@ type Request struct {
 
 type Response struct {
 	resp.Response
-	Alias string `json:"alias,omitempty"`
+	Order postgres.Order
 }
 
 //go:generate go run github.com/vektra/mockery/v2@v2.50.1 --name=URLGetter
@@ -28,10 +27,10 @@ type ORDERGetter interface {
 
 func GetOrder(id string, OrderGetter ORDERGetter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const op = "handlers.Get.GetOrder"
+		// const op = "handlers.Get.GetOrder"
 
 		// log := log.With(
-		// 	slog.String("op", op),
+		// 	// slog.String("op", op),
 		// 	slog.String("request_id", middleware.GetReqID(r.Context())),
 		// )
 
@@ -54,6 +53,6 @@ func GetOrder(id string, OrderGetter ORDERGetter) http.HandlerFunc {
 			return
 		}
 
-		http.Redirect(w, r, order.Delivery.Address, http.StatusSeeOther)
+		http.Redirect(w, r, order.TrackNumber, http.StatusSeeOther)
 	}
 }
