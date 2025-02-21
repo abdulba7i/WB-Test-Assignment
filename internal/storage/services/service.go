@@ -34,3 +34,31 @@ func (s *OrderService) GetOrderById(id string) (postgres.Order, error) {
 	log.Info("got order from redis")
 	return order, nil
 }
+
+func (s *OrderService) LoadOrdersToCache() error {
+	log.Info("load orders from db")
+	limit := 5000
+	ofset := 0
+	for {
+		orders, err := s.Storage.GetAllOrders(limit, ofset)
+		log.Info("got orders from db")
+		if err != nil {
+			log.Error("failed load orders to cache", err)
+			continue
+		}
+		if len(orders) == 0 {
+			break
+		}
+		log.Info("loading orders to cache")
+		for _, order := range orders {
+			err = s.Redis.Set(order.OrderUID, order)
+			if err != nil {
+				continue
+			}
+		}
+		limit += 100
+		ofset += 100
+	}
+
+	return nil
+}

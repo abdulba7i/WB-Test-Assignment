@@ -1,36 +1,3 @@
-// package main
-
-// import (
-// 	"fmt"
-// 	"l0wb/internal/config"
-// 	_nats "l0wb/pkg/nats"
-
-// 	"github.com/labstack/gommon/log"
-// )
-
-// func main() {
-// 	cfg := config.MustLoad()
-// 	nc, err := _nats.New(cfg.NatsStreaming, "1")
-
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-
-// 	err = nc.Publish("l0wb", []byte(fmt.Sprintf("test message %d", 1)))
-// 	err = nc.Publish("l0wb", []byte(fmt.Sprintf("test message %d", 2)))
-
-// 	// for i := 0; i < 2; i++ {
-// 	// 	err = nc.Publish("l0wb", []byte(fmt.Sprintf("test message %d", i)))
-// 	// 	if err != nil {
-// 	// 		log.Fatal(err)
-// 	// 	}
-
-// 	// 	log.Info("message sent")
-// 	// }
-
-// 	nc.Close()
-// }
-
 package main
 
 import (
@@ -39,6 +6,7 @@ import (
 	"l0wb/internal/storage/postgres"
 	_nats "l0wb/pkg/nats"
 
+	"github.com/google/uuid"
 	"github.com/labstack/gommon/log"
 )
 
@@ -50,9 +18,28 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Пример данных заказа
+	for {
+		orderData, err := json.Marshal(GetRandomOrder())
+		if err != nil {
+			log.Fatal("failed to marshal order data:", err)
+		}
+
+		// Отправляем JSON через NATS
+		err = nc.Publish("l0wb", orderData)
+		if err != nil {
+			log.Fatal("failed to publish message:", err)
+		}
+
+		log.Info("message sent")
+	}
+
+	nc.Close()
+}
+
+func GetRandomOrder() postgres.Order {
+	id := uuid.NewString()
 	order := postgres.Order{
-		OrderUID:    "b563feb7b2b84b6test",
+		OrderUID:    id,
 		TrackNumber: "WBILMTESTTRACK",
 		Entry:       "WBIL",
 		Delivery: postgres.Delivery{
@@ -65,7 +52,7 @@ func main() {
 			Email:   "test@gmail.com",
 		},
 		Payment: postgres.Payment{
-			Transaction:  "b563feb7b2b84b6test",
+			Transaction:  id,
 			RequestID:    "",
 			Currency:     "USD",
 			Provider:     "wbpay",
@@ -101,18 +88,5 @@ func main() {
 		OOFShard:          "1",
 	}
 
-	orderData, err := json.Marshal(order)
-	if err != nil {
-		log.Fatal("failed to marshal order data:", err)
-	}
-
-	// Отправляем JSON через NATS
-	err = nc.Publish("l0wb", orderData)
-	if err != nil {
-		log.Fatal("failed to publish message:", err)
-	}
-
-	log.Info("message sent")
-
-	nc.Close()
+	return order
 }

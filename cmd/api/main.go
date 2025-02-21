@@ -21,29 +21,25 @@ const (
 )
 
 func main() {
-	// id := "b563feb7b2b84b6test"
 	cfg := config.MustLoad()
 
 	log := setupLogger(cfg.Env)
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
-	logger.Info("starting url-shortener",
-		slog.String("env", cfg.Env),
-		slog.String("version", "123"),
-	)
-
-	storage, err := postgres.New(cfg.Database)
 	redis := cache.New(cfg.Redis)
-
+	storage, err := postgres.New(cfg.Database)
 	order_service := services.New(*storage, *redis)
-
 	if err != nil {
 		logger.Error("failed to init storage", slog.Any("error", err))
 		os.Exit(1)
 	}
+	go order_service.LoadOrdersToCache()
+	// if err != nil {
+	// 	logger.Error("failed load orders to cache", slog.Any("error", err))
+	// 	os.Exit(1)
+	// }
 
 	router := chi.NewRouter()
-
 	router.Use(middleware.RequestID)
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
@@ -54,7 +50,6 @@ func main() {
 	})
 
 	log.Info("starting server", slog.String("addres", cfg.HTTPServer.Address))
-
 	srv := http.Server{
 		Addr:         cfg.HTTPServer.Address,
 		Handler:      router,

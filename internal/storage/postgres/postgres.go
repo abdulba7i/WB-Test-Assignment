@@ -295,3 +295,62 @@ func (s *Storage) GetOrderById(id string) (Order, error) {
 
 	return order, nil
 }
+
+func (s *Storage) GetAllOrders(limit, offset int) ([]Order, error) {
+	const op = "storage.postgres.GetAllOrders"
+
+	var orders []Order
+
+	query := `
+		SELECT o.order_uid, o.track_number, o.entry, 
+		       d.name, d.phone, d.zip, d.city, d.address, d.region, d.email, 
+		       p.transaction, p.request_id, p.currency, p.provider, p.amount, 
+		       p.bank, p.delivery_cost, p.goods_total, p.custom_fee, 
+		       o.locale, o.internal_signature, o.customer_id, o.delivery_service, 
+		       o.shardkey, o.sm_id, o.date_created, o.oof_shard,
+		       COALESCE((SELECT json_agg(i) FROM items i WHERE i.order_uid = o.order_uid), '[]'::json) AS items
+		FROM orders o
+		JOIN delivery d ON o.delivery_id = d.id
+		JOIN payment p ON o.payment_id = p.id
+		LIMIT $1 OFFSET $2
+	`
+
+	rows, err := s.db.Query(query, limit, offset)
+	fmt.Print("LIMIT", limit, "OFFSET", offset)
+
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	for rows.Next() {
+		var order Order
+		var delivery Delivery
+		var payment Payment
+		var itemsJSON json.RawMessage
+
+		if err := rows.Scan(
+			&order.OrderUID,
+			&order.TrackNumber,
+			&order.Entry,
+			&delivery.Name, &delivery.Phone, &delivery.Zip, &delivery.City, &delivery.Address, &delivery.Region, &delivery.Email,
+			&payment.Transaction, &payment.RequestID, &payment.Currency, &payment.Provider, &payment.Amount,
+			&payment.Bank, &payment.DeliveryCost, &payment.GoodsTotal, &payment.CustomFee,
+			&order.Locale, &order.InternalSignature, &order.CustomerID, &order.DeliveryService,
+			&order.ShardKey, &order.SMID, &order.DateCreated, &order.OOFShard,
+			&itemsJSON,
+		); err != nil {
+			return nil, fmt.Errorf("%s: %w", op, err)
+		}
+
+		order.Delivery = delivery
+		order.Payment = payment
+
+		if err := json.Unmarshal(itemsJSON, &order.Items); err != nil {
+			return nil, fmt.Errorf("%s: failed to parse items JSON: %w", op, err)
+		}
+
+		orders = append(orders, order)
+	}
+
+	return orders, nil
+}

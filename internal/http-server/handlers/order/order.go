@@ -22,7 +22,7 @@ type Response struct {
 	Order postgres.Order
 }
 
-//go:generate go run github.com/vektra/mockery/v2@v2.50.1 --name=URLGetter
+//go:generate go run github.com/vektra/mockery/v2@v2.50.1 --name=OrderGetter
 type ORDERGetter interface {
 	GetOrderById(id string) (postgres.Order, error)
 }
