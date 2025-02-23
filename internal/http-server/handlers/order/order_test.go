@@ -1,44 +1,66 @@
-package order_test
+package order
 
 import (
-	"l0wb/internal/http-server/handlers/order"
-	"l0wb/internal/http-server/handlers/order/mocks"
-	"l0wb/internal/lib/logger/handlers/slogdiscard"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/go-chi/chi/v5"
+	"l0wb/internal/http-server/handlers/order/mocks"
+	"l0wb/internal/lib/logger/handlers/slogdiscard"
+	"l0wb/internal/storage/postgres"
+
+	"github.com/go-chi/chi"
+	"github.com/go-chi/render"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestOrder(t *testing.T) {
+func TestGetOrder(t *testing.T) {
 	cases := []struct {
 		name      string
 		id        string
+		mockOrder postgres.Order
 		respError string
 		mockError error
 	}{
 		{
-			name: "happy test",
+			name: "Success",
 			id:   "b563feb7b2b84b6test",
+			mockOrder: postgres.Order{
+				OrderUID: "b563feb7b2b84b6test", // Устанавливаем OrderUID в mockOrder
+			},
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			idOrderMock := mocks.NewORDERGetter(t)
+			mockGetter := mocks.NewORDERGetter(t)
 
-			if tc.respError == "" || tc.mockError != nil {
-				idOrderMock.On("GetOrderById", tc.id).Return(tc.id, tc.mockError).Once()
+			expectedOrder := postgres.Order{
+				OrderUID: tc.id,
 			}
 
-			r := chi.NewRouter()
-			r.Get("/{order}", order.GetOrder(slogdiscard.NewDiscardLogger(), idOrderMock))
+			if tc.respError == "" || tc.mockError != nil {
+				mockGetter.On("GetOrderById", tc.id).
+					Return(tc.mockOrder, tc.mockError).Once()
 
-			ts := httptest.NewServer(r)
-			defer ts.Close()
+				r := chi.NewRouter()
+				r.Get("/order/{id}", GetOrder(slogdiscard.NewDiscardLogger(), mockGetter))
 
-			// require.NoError(t, err)
-			// докончить ................
+				req, err := http.NewRequest("GET", "/order/b563feb7b2b84b6test", nil)
+				assert.NoError(t, err)
+
+				rr := httptest.NewRecorder()
+				r.ServeHTTP(rr, req)
+
+				assert.Equal(t, http.StatusOK, rr.Code)
+
+				var response Response
+				err = render.DecodeJSON(rr.Body, &response)
+				assert.NoError(t, err)
+
+				assert.Equal(t, expectedOrder, response.Order)
+			}
+
 		})
 	}
 }
