@@ -3,10 +3,13 @@ package main
 import (
 	"context"
 	"encoding/json"
+
+	"l0/internal/cache"
 	"l0/internal/config"
-	"l0/internal/storage/cache"
-	"l0/internal/storage/postgres"
-	_nats "l0/pkg/nats"
+	"l0/internal/model"
+	_nats "l0/internal/pkg/nats"
+	"l0/internal/repository"
+
 	"log/slog"
 	"os"
 	"os/signal"
@@ -18,15 +21,12 @@ import (
 )
 
 func main() {
-	// Загрузка конфигурации
 	cfg := config.MustLoad()
 
-	// Настройка логгера
 	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	log.Info("starting consumer")
 
-	// Инициализация хранилищ
-	storage, err := postgres.New(cfg.Database)
+	storage, err := repository.Connect(cfg.Database)
 	if err != nil {
 		log.Error("failed to init storage", slog.Any("error", err))
 		os.Exit(1)
@@ -35,7 +35,6 @@ func main() {
 	redisCache := cache.New(cfg.Redis)
 	cacheService := cache.NewCacheService(redisCache, storage, cache.WithLogger(log))
 
-	// Восстанавливаем кэш из базы данных
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	if err := cacheService.RestoreCache(ctx); err != nil {
 		log.Error("failed to restore cache", slog.Any("error", err))
@@ -45,7 +44,6 @@ func main() {
 	cancel()
 	log.Info("cache restored successfully")
 
-	// Подключение к NATS Streaming
 	nc, err := _nats.New(cfg.NatsStreaming, "consumer")
 	if err != nil {
 		log.Error("failed to connect to nats", slog.Any("error", err))
@@ -53,23 +51,19 @@ func main() {
 	}
 	defer nc.Close()
 
-	// Канал для graceful shutdown
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
 
-	// WaitGroup для отслеживания обработки сообщений
 	var wg sync.WaitGroup
 	_, cancel = context.WithCancel(context.Background())
 
-	// Подписка на сообщения
 	sub, err := nc.Consume("l0", func(msg *stan.Msg) {
 		wg.Add(1)
 		defer wg.Done()
 
 		log.Info("received message", slog.String("data", string(msg.Data)))
 
-		// Преобразование msg.Data в структуру Order
-		var order postgres.Order
+		var order model.Order
 		if err := json.Unmarshal(msg.Data, &order); err != nil {
 			log.Error("failed to unmarshal message",
 				slog.Any("error", err),
@@ -78,7 +72,6 @@ func main() {
 			return
 		}
 
-		// Сохранение в базу данных
 		if err := storage.AddOrder(order); err != nil {
 			log.Error("failed to save order to database",
 				slog.Any("error", err),
@@ -87,7 +80,6 @@ func main() {
 			return
 		}
 
-		// Сохранение в Redis
 		if err := redisCache.Set(order.OrderUID, order); err != nil {
 			log.Error("failed to save order to redis",
 				slog.Any("error", err),
@@ -100,7 +92,6 @@ func main() {
 			slog.String("order_id", order.OrderUID),
 		)
 
-		// Подтверждение обработки сообщения
 		if err := msg.Ack(); err != nil {
 			log.Error("failed to acknowledge message",
 				slog.Any("error", err),
@@ -116,19 +107,15 @@ func main() {
 
 	log.Info("consumer started successfully")
 
-	// Ожидание сигнала завершения
 	<-shutdown
 	log.Info("starting graceful shutdown")
 
-	// Отмена контекста и ожидание завершения обработки сообщений
 	cancel()
 
-	// Отписка от NATS
 	if err := sub.Unsubscribe(); err != nil {
 		log.Error("failed to unsubscribe", slog.Any("error", err))
 	}
 
-	// Ожидание завершения обработки текущих сообщений с таймаутом
 	done := make(chan struct{})
 	go func() {
 		wg.Wait()

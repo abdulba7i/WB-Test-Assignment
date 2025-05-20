@@ -10,15 +10,12 @@ import (
 )
 
 type Config struct {
-	Env         string `yaml:"env"`
-	StoragePath string `yaml:"storage_path"`
-
+	Env           string        `yaml:"env"`
+	StoragePath   string        `yaml:"storage_path"`
 	HTTPServer    HTTPServer    `yaml:"http_server"`
 	Database      Database      `yaml:"database"`
 	Redis         Redis         `yaml:"redis"`
 	NatsStreaming NatsStreaming `yaml:"nats-streaming"`
-
-	// TODO: Add the remaining structures
 }
 type HTTPServer struct {
 	Address     string        `yaml:"address"`
@@ -49,7 +46,6 @@ type NatsStreaming struct {
 }
 
 func MustLoad() *Config {
-	// Указываем полный путь к конфигурационному файлу
 	configPath := filepath.Join("./config/config.yaml")
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {

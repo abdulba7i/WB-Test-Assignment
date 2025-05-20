@@ -1,5 +1,4 @@
 env: "local" # local, dev, prod
-# storage_path: "./storage.db"
 http_server:
   address: "0.0.0.0:8000"
   timeout: 10s
@@ -9,7 +8,6 @@ http_server:
 
 nats-streaming:
   host : "nats-streaming"
-  # host : "127.0.0.1"
   port : "4222"
   user : "nats"
   password : "nats"
@@ -17,9 +15,7 @@ nats-streaming:
 
 database:
   host : "app-db"
-  # host : "127.0.0.1"
   port : "5432"
-  # port : "5431"
   user : "postgres"
   password : "postgres"
   dbname : "l0"
@@ -30,7 +26,6 @@ table: "schema_migrations"
 
 redis:
   host : "app-redis"
-  # host : "127.0.0.1"
   port : "6379"
   user : ""
   password : ""

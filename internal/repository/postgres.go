@@ -10,16 +10,13 @@ import (
 	"path/filepath"
 	"time"
 
+	_ "github.com/lib/pq"
 	"github.com/pressly/goose"
 )
 
 type Storage struct {
 	db *sql.DB
 }
-
-// func (s *Storage) DB() *sql.DB {
-// 	return s.db
-// }
 
 func Connect(cfg config.Database) (*Storage, error) {
 	const op = "storage.postgre.New"
@@ -43,6 +40,10 @@ func Connect(cfg config.Database) (*Storage, error) {
 	defer cancel()
 	if err := db.PingContext(ctx); err != nil {
 		return nil, fmt.Errorf("%s: failed to ping database: %w", op, err)
+	}
+
+	if err := goose.Up(db, "migrations"); err != nil {
+		return nil, fmt.Errorf("%s: goose up: %w", op, err)
 	}
 
 	migrationsDir, err := filepath.Abs("./migrations")

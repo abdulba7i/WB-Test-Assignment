@@ -7,9 +7,13 @@ import (
 	"net/http"
 	"path/filepath"
 
+	// "l0/garbage/storage/postgres"
 	resp "l0/internal/lib/api/response"
-	"l0/internal/storage"
-	"l0/internal/storage/postgres"
+	"l0/internal/lib/storage"
+	"l0/internal/model"
+
+	// "l0/internal/storage"
+	// "l0/internal/storage/postgres"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
@@ -21,17 +25,17 @@ type Request struct {
 
 type Response struct {
 	resp.Response
-	Order postgres.Order
+	Order model.Order
 }
 
 type HTMLResponse struct {
 	Error string
-	Order *postgres.Order
+	Order *model.Order
 }
 
 //go:generate go run github.com/vektra/mockery/v2@v2.52.3 --name=ORDERGetter
 type ORDERGetter interface {
-	GetOrderById(id string) (postgres.Order, error)
+	GetOrderById(id string) (model.Order, error)
 }
 
 func GetOrder(logger *slog.Logger, OrderGetter ORDERGetter) http.HandlerFunc {
