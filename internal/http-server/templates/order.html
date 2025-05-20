@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WB Tech - Информация о заказе</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding-top: 2rem;
+        }
+        .container {
+            max-width: 900px;
+            background-color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        .search-form {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        .section {
+            margin-bottom: 2rem;
+            padding: 1rem;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+        }
+        .section-title {
+            color: #0d6efd;
+            border-bottom: 2px solid #0d6efd;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .table {
+            margin-bottom: 0;
+        }
+        .error-message {
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mb-4">Поиск заказа</h1>
+        
+        <div class="search-form">
+            <form id="searchForm" class="row justify-content-center" onsubmit="handleSubmit(event)">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <input type="text" name="id" id="orderId" class="form-control" placeholder="Введите ID заказа" required>
+                        <button type="submit" class="btn btn-primary">Найти</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        {{if .Error}}
+        <div class="alert alert-danger error-message">
+            {{.Error}}
+        </div>
+        {{end}}
+
+        {{if .Order}}
+        <div class="order-details">
+            <div class="section">
+                <h3 class="section-title">Основная информация</h3>
+                <div class="row">
+                    <div class="col-md-4">
+                        <p><strong>ID заказа:</strong> {{.Order.OrderUID}}</p>
+                        <p><strong>Трек номер:</strong> {{.Order.TrackNumber}}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p><strong>Дата создания:</strong> {{.Order.DateCreated}}</p>
+                        <p><strong>Сервис доставки:</strong> {{.Order.DeliveryService}}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3 class="section-title">Информация о доставке</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Получатель:</strong> {{.Order.Delivery.Name}}</p>
+                        <p><strong>Телефон:</strong> {{.Order.Delivery.Phone}}</p>
+                        <p><strong>Email:</strong> {{.Order.Delivery.Email}}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Адрес:</strong> {{.Order.Delivery.Address}}</p>
+                        <p><strong>Город:</strong> {{.Order.Delivery.City}}</p>
+                        <p><strong>Индекс:</strong> {{.Order.Delivery.Zip}}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3 class="section-title">Оплата</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Транзакция:</strong> {{.Order.Payment.Transaction}}</p>
+                        <p><strong>Сумма:</strong> {{.Order.Payment.Amount}} {{.Order.Payment.Currency}}</p>
+                        <p><strong>Банк:</strong> {{.Order.Payment.Bank}}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Стоимость доставки:</strong> {{.Order.Payment.DeliveryCost}}</p>
+                        <p><strong>Стоимость товаров:</strong> {{.Order.Payment.GoodsTotal}}</p>
+                        <p><strong>Доп. сбор:</strong> {{.Order.Payment.CustomFee}}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3 class="section-title">Товары</h3>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Название</th>
+                                <th>Бренд</th>
+                                <th>Цена</th>
+                                <th>Размер</th>
+                                <th>Скидка</th>
+                                <th>Итого</th>
+                                <th>Статус</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{range .Order.Items}}
+                            <tr>
+                                <td>{{.Name}}</td>
+                                <td>{{.Brand}}</td>
+                                <td>{{.Price}}</td>
+                                <td>{{.Size}}</td>
+                                <td>{{.Sale}}%</td>
+                                <td>{{.TotalPrice}}</td>
+                                <td>{{.Status}}</td>
+                            </tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {{end}}
+    </div>
+
+    <script>
+        function handleSubmit(event) {
+            event.preventDefault();
+            const orderId = document.getElementById('orderId').value.trim();
+            if (orderId) {
+                window.location.href = '/order/' + encodeURIComponent(orderId);
+            }
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

@@ -2,7 +2,7 @@ package nats
 
 import (
 	"fmt"
-	"l0wb/internal/config"
+	"l0/internal/config"
 
 	"github.com/nats-io/stan.go"
 )
@@ -28,8 +28,8 @@ func (n *Nats) Publish(topic string, data []byte) error {
 }
 
 // Consume подписывается на канал с обработчиком сообщений
-func (n *Nats) Consume(topic string, handler func(msg *stan.Msg)) (stan.Subscription, error) {
-	return n.connection.Subscribe(topic, handler, stan.DurableName("my-durable"), stan.SetManualAckMode())
+func (n *Nats) Consume(topic string, handler func(msg *stan.Msg), opts ...stan.SubscriptionOption) (stan.Subscription, error) {
+	return n.connection.Subscribe(topic, handler, opts...)
 }
 
 // Close закрывает соединение с NATS Streaming

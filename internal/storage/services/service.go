@@ -1,8 +1,11 @@
 package services
 
 import (
-	"l0wb/internal/storage/cache"
-	"l0wb/internal/storage/postgres"
+	"l0/internal/storage/cache"
+	"l0/internal/storage/postgres"
+
+	// "l0/internal/repository/cache"
+	// "l0/internal/postgrte/postgres"
 
 	"github.com/labstack/gommon/log"
 )
@@ -37,7 +40,7 @@ func (s *OrderService) GetOrderById(id string) (postgres.Order, error) {
 
 func (s *OrderService) LoadOrdersToCache() error {
 	log.Info("load orders from db")
-	limit := 5000
+	limit := 100
 	ofset := 0
 	for {
 		orders, err := s.Storage.GetAllOrders(limit, ofset)
@@ -51,10 +54,10 @@ func (s *OrderService) LoadOrdersToCache() error {
 		}
 		log.Info("loading orders to cache")
 		for _, order := range orders {
-			err = s.Redis.Set(order.OrderUID, order)
-			if err != nil {
-				continue
-			}
+			go s.Redis.Set(order.OrderUID, order)
+			// if err != nil {
+			// 	continue
+			// }
 		}
 		limit += 100
 		ofset += 100

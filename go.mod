@@ -1,4 +1,4 @@
-module l0wb
+module l0
 
 go 1.23.4
 
@@ -7,14 +7,16 @@ require (
 	github.com/go-chi/chi/v5 v5.2.1
 	github.com/go-chi/render v1.0.3
 	github.com/go-playground/validator/v10 v10.25.0
-	github.com/google/uuid v1.6.0
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/labstack/gommon v0.4.2
 	github.com/lib/pq v1.10.9
 	github.com/nats-io/stan.go v0.10.4
 	github.com/redis/go-redis/v9 v9.7.0
+	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.8.4
 )
+
+require github.com/pkg/errors v0.9.1 // indirect
 
 require (
 	github.com/BurntSushi/toml v1.2.1 // indirect
@@ -37,6 +39,7 @@ require (
 	github.com/nats-io/nkeys v0.4.9 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/pressly/goose v2.7.0+incompatible
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect

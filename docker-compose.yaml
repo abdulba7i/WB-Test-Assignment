@@ -1,0 +1,85 @@
+version: "3.9"
+
+volumes:
+  redis-data:
+  db-data:
+
+services:
+  api:
+    container_name: wb-tech-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 8000:8000
+    command: ["./api"]
+    depends_on:
+      app-db:
+        condition: service_healthy
+      app-redis:
+        condition: service_started
+
+  consumer:
+    container_name: consumer
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["./consumer"]
+    depends_on:
+      api:
+        condition: service_started
+      app-db:
+        condition: service_healthy
+      app-redis:
+        condition: service_started
+      nats-streaming:
+        condition: service_started
+
+  publisher:
+    container_name: publisher
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["./publisher"]
+    depends_on:
+      app-db:
+        condition: service_healthy
+      consumer:
+        condition: service_started
+      nats-streaming:
+        condition: service_started
+
+  app-redis:
+    image: redis
+    environment:
+      - REDIS_PASSWORD=redis
+    ports:
+      - "6378:6379"
+
+  app-db:
+    image: postgres:14.5-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+    ports:
+      - 5431:5432
+
+  nats-streaming:
+    image: nats-streaming
+    ports:
+      - "4222:4222"
+    command: [
+      "--cluster_id", "test-cluster",
+      "--store", "file",
+      "--dir", "/data",
+      "--max_msgs", "1000000",
+      "--max_bytes", "1GB",
+      "--max_age", "24h"
+    ]

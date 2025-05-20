@@ -3,7 +3,7 @@ package cache
 import (
 	"context"
 	"encoding/json"
-	"l0wb/internal/config"
+	"l0/internal/config"
 	"log"
 
 	"github.com/redis/go-redis/v9"

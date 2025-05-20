@@ -5,9 +5,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"l0wb/internal/http-server/handlers/order/mocks"
-	"l0wb/internal/lib/logger/handlers/slogdiscard"
-	"l0wb/internal/storage/postgres"
+	"l0/internal/http-server/handlers/order/mocks"
+	"l0/internal/lib/logger/handlers/slogdiscard"
+	"l0/internal/storage/postgres"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
