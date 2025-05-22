@@ -17,6 +17,7 @@ type Config struct {
 	Redis         Redis         `yaml:"redis"`
 	NatsStreaming NatsStreaming `yaml:"nats-streaming"`
 }
+
 type HTTPServer struct {
 	Address     string        `yaml:"address"`
 	Timeout     time.Duration `yaml:"timeout"`
@@ -24,6 +25,7 @@ type HTTPServer struct {
 	User        string        `yaml:"user"`
 	Password    string        `yaml:"password"`
 }
+
 type Database struct {
 	Host     string `yaml:"host"`
 	Port     string `yaml:"port"`
@@ -31,12 +33,14 @@ type Database struct {
 	Password string `yaml:"password"`
 	Dbname   string `yaml:"dbname"`
 }
+
 type Redis struct {
 	Host     string `yaml:"host"`
 	Port     string `yaml:"port"`
 	User     string `yaml:"user"`
 	Password string `yaml:"password"`
 }
+
 type NatsStreaming struct {
 	Host      string `yaml:"host"`
 	Port      string `yaml:"port"`

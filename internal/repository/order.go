@@ -46,7 +46,6 @@ func (s *Storage) AddOrder(ordr model.Order) error {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	// Теперь можно добавлять items, так как order_uid уже в orders
 	err = s.AddItems(tx, ordr.OrderUID, ordr.Items)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
@@ -175,18 +174,15 @@ func (s *Storage) GetAllOrders(limit, offset int) ([]model.Order, error) {
 	return orders, nil
 }
 
-// GetOrdersBatch получает заказы пакетами
 func (s *Storage) GetOrdersBatch(ctx context.Context, batchSize int, processBatch func([]model.Order) error) error {
 	const op = "storage.postgres.GetOrdersBatch"
 
-	// Получаем общее количество заказов
 	var total int
 	err := s.db.QueryRow("SELECT COUNT(*) FROM orders").Scan(&total)
 	if err != nil {
 		return fmt.Errorf("%s: failed to get total count: %w", op, err)
 	}
 
-	// Обрабатываем данные пакетами
 	for offset := 0; offset < total; offset += batchSize {
 		query := `
 			SELECT o.order_uid, o.track_number, o.entry, o.locale, o.internal_signature,
@@ -223,7 +219,6 @@ func (s *Storage) GetOrdersBatch(ctx context.Context, batchSize int, processBatc
 				return fmt.Errorf("%s: failed to scan order: %w", op, err)
 			}
 
-			// Получаем items для заказа
 			items, err := s.getItemsForOrder(ctx, o.OrderUID)
 			if err != nil {
 				return fmt.Errorf("%s: failed to get items for order %s: %w", op, o.OrderUID, err)
@@ -239,7 +234,6 @@ func (s *Storage) GetOrdersBatch(ctx context.Context, batchSize int, processBatc
 			return fmt.Errorf("%s: rows error: %w", op, err)
 		}
 
-		// Обрабатываем пакет заказов
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -253,7 +247,6 @@ func (s *Storage) GetOrdersBatch(ctx context.Context, batchSize int, processBatc
 	return nil
 }
 
-// getItemsForOrder получает все items для заказа
 func (s *Storage) getItemsForOrder(ctx context.Context, orderUID string) ([]model.Item, error) {
 	query := `
 		SELECT chrt_id, track_number, price, rid, name, sale, size, total_price, nm_id, brand, status

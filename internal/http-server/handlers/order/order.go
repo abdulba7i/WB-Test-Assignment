@@ -45,7 +45,6 @@ func GetOrder(logger *slog.Logger, OrderGetter ORDERGetter) http.HandlerFunc {
 			id = r.URL.Query().Get("id")
 		}
 
-		// Если ID не указан, показываем пустую форму
 		if id == "" {
 			renderTemplate(w, HTMLResponse{})
 			return
@@ -53,7 +52,6 @@ func GetOrder(logger *slog.Logger, OrderGetter ORDERGetter) http.HandlerFunc {
 
 		order, err := OrderGetter.GetOrderById(id)
 
-		// Определяем формат ответа на основе заголовка Accept
 		acceptHeader := r.Header.Get("Accept")
 		if acceptHeader == "application/json" {
 			if errors.Is(err, storage.ErrUrlNotFound) {
@@ -70,13 +68,12 @@ func GetOrder(logger *slog.Logger, OrderGetter ORDERGetter) http.HandlerFunc {
 			return
 		}
 
-		// HTML ответ
 		if err != nil {
 			if errors.Is(err, storage.ErrUrlNotFound) {
 				renderTemplate(w, HTMLResponse{Error: "Заказ не найден"})
 				return
 			}
-			renderTemplate(w, HTMLResponse{Error: "Внутренняя ошибка сервера"})
+			renderTemplate(w, HTMLResponse{Error: "Заказ не найден"})
 			return
 		}
 

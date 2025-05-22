@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5/middleware"
-	// "golang.org/x/exp/slog" - старая версия, была замена на log/slog
 	"log/slog"
+
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 func New(log *slog.Logger) func(next http.Handler) http.Handler {
