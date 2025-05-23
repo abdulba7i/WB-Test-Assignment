@@ -6,14 +6,11 @@ import (
 	"log/slog"
 	"net/http"
 	"path/filepath"
+	"strings"
 
-	// "l0/garbage/storage/postgres"
 	resp "l0/internal/lib/api/response"
 	"l0/internal/lib/storage"
 	"l0/internal/model"
-
-	// "l0/internal/storage"
-	// "l0/internal/storage/postgres"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
@@ -38,59 +35,64 @@ type ORDERGetter interface {
 	GetOrderById(id string) (model.Order, error)
 }
 
-func GetOrder(logger *slog.Logger, OrderGetter ORDERGetter) http.HandlerFunc {
+func GetOrder(logger *slog.Logger, orderGetter ORDERGetter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
 		if id == "" {
 			id = r.URL.Query().Get("id")
 		}
-
 		if id == "" {
-			renderTemplate(w, HTMLResponse{})
+			renderTemplate(w, HTMLResponse{Error: "ID не указан"})
 			return
 		}
 
-		order, err := OrderGetter.GetOrderById(id)
+		order, err := orderGetter.GetOrderById(id)
 
-		acceptHeader := r.Header.Get("Accept")
-		if acceptHeader == "application/json" {
-			if errors.Is(err, storage.ErrUrlNotFound) {
-				render.JSON(w, r, resp.Error("not found"))
-				return
-			}
-
-			if err != nil {
-				render.JSON(w, r, resp.Error("internal error"))
-				return
-			}
-
-			render.JSON(w, r, Response{Response: *resp.OK(), Order: order})
-			return
-		}
+		accept := r.Header.Get("Accept")
+		isJSON := strings.Contains(accept, "application/json")
 
 		if err != nil {
 			if errors.Is(err, storage.ErrUrlNotFound) {
-				renderTemplate(w, HTMLResponse{Error: "Заказ не найден"})
+				if isJSON {
+					w.WriteHeader(http.StatusNotFound)
+					render.JSON(w, r, resp.Error("not found"))
+				} else {
+					renderTemplate(w, HTMLResponse{Error: "Заказ не найден"})
+				}
 				return
 			}
-			renderTemplate(w, HTMLResponse{Error: "Заказ не найден"})
+
+			logger.Error("ошибка получения заказа", slog.String("id", id), slog.String("err", err.Error()))
+
+			if isJSON {
+				render.JSON(w, r, resp.Error("internal error"))
+			} else {
+				renderTemplate(w, HTMLResponse{Error: "Заказ не найден"})
+			}
 			return
 		}
 
-		renderTemplate(w, HTMLResponse{Order: &order})
+		if isJSON {
+			render.JSON(w, r, Response{Response: *resp.OK(), Order: order})
+		} else {
+			renderTemplate(w, HTMLResponse{Order: &order})
+		}
 	}
 }
 
 func renderTemplate(w http.ResponseWriter, data HTMLResponse) {
 	tmpl, err := template.ParseFiles(filepath.Join("internal", "http-server", "templates", "order.html"))
 	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	if data.Error != "" {
+		w.WriteHeader(http.StatusNotFound)
 	}
 
 	err = tmpl.Execute(w, data)
 	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
+		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)
 	}
 }

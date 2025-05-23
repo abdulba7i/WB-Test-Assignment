@@ -39,7 +39,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	orderService := service.New(*storage, *redis)
+	orderService := service.New(storage, redis)
 
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)

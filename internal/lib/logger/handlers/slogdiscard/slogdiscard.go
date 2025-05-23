@@ -2,8 +2,11 @@ package slogdiscard
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 )
+
+var ErrNotFound = errors.New("order not found")
 
 func NewDiscardLogger() *slog.Logger {
 	return slog.New(NewDiscardHandler())

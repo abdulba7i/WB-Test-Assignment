@@ -1,65 +1,86 @@
-package order
+package order_test
 
-// import (
-// 	"l0/internal/http-server/handlers/order/mocks"
-// 	"l0/internal/lib/logger/handlers/slogdiscard"
-// 	"l0/internal/model"
-// 	"net/http"
-// 	"net/http/httptest"
-// 	"testing"
+import (
+	"context"
+	"errors"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"testing"
 
-// 	"github.com/go-chi/chi"
-// 	"github.com/go-chi/render"
-// 	"github.com/stretchr/testify/assert"
-// )
+	"l0/internal/http-server/handlers/order"
+	"l0/internal/http-server/handlers/order/mocks"
+	"l0/internal/lib/storage"
+	"l0/internal/model"
 
-// func TestGetOrder(t *testing.T) {
-// 	cases := []struct {
-// 		name      string
-// 		id        string
-// 		mockOrder model.Order
-// 		respError string
-// 		mockError error
-// 	}{
-// 		{
-// 			name: "Success",
-// 			id:   "b563feb7b2b84b6test",
-// 			mockOrder: model.Order{
-// 				OrderUID: "b563feb7b2b84b6test",
-// 			},
-// 		},
-// 	}
+	"log/slog"
 
-// 	for _, tc := range cases {
-// 		t.Run(tc.name, func(t *testing.T) {
-// 			mockGetter := mocks.NewORDERGetter(t)
+	"github.com/go-chi/chi"
+	"github.com/stretchr/testify/assert"
+)
 
-// 			expectedOrder := model.Order{
-// 				OrderUID: tc.id,
-// 			}
+func TestGetOrder(t *testing.T) {
+	tests := []struct {
+		name            string
+		id              string
+		acceptHeader    string
+		mockReturnOrder model.Order
+		mockReturnError error
+		wantStatus      int
+		wantBody        string
+	}{
+		{
+			name:            "OK",
+			id:              "order123",
+			acceptHeader:    "application/json",
+			mockReturnOrder: model.Order{OrderUID: "order123"},
+			mockReturnError: nil,
+			wantStatus:      http.StatusOK,
+			wantBody:        `"order_uid":"order123"`,
+		},
+		{
+			name:            "Not Found",
+			id:              "missing123",
+			acceptHeader:    "application/json",
+			mockReturnOrder: model.Order{},
+			mockReturnError: storage.ErrUrlNotFound,
+			wantStatus:      http.StatusNotFound,
+			wantBody:        `"error":"not found"`,
+		},
+		{
+			name:            "Internal Error",
+			id:              "error123",
+			acceptHeader:    "application/json",
+			mockReturnOrder: model.Order{},
+			mockReturnError: errors.New("some db error"),
+			wantStatus:      http.StatusOK,
+			wantBody:        `"error":"internal error"`,
+		},
+	}
 
-// 			if tc.respError == "" || tc.mockError != nil {
-// 				mockGetter.On("GetOrderById", tc.id).
-// 					Return(tc.mockOrder, tc.mockError).Once()
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mockGetter := mocks.NewORDERGetter(t)
+			mockGetter.On("GetOrderById", tc.id).Return(tc.mockReturnOrder, tc.mockReturnError)
 
-// 				r := chi.NewRouter()
-// 				r.Get("/order/{id}", GetOrder(slogdiscard.NewDiscardLogger(), mockGetter))
+			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+			handler := order.GetOrder(logger, mockGetter)
 
-// 				req, err := http.NewRequest("GET", "/order/b563feb7b2b84b6test", nil)
-// 				assert.NoError(t, err)
+			req := httptest.NewRequest("GET", "/order/"+tc.id, nil)
+			if tc.acceptHeader != "" {
+				req.Header.Set("Accept", tc.acceptHeader)
+			}
 
-// 				rr := httptest.NewRecorder()
-// 				r.ServeHTTP(rr, req)
+			routeCtx := chi.NewRouteContext()
+			routeCtx.URLParams.Add("id", tc.id)
+			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx))
 
-// 				assert.Equal(t, http.StatusOK, rr.Code)
+			w := httptest.NewRecorder()
+			handler(w, req)
 
-// 				var response Response
-// 				err = render.DecodeJSON(rr.Body, &response)
-// 				assert.NoError(t, err)
-
-// 				assert.Equal(t, expectedOrder, response.Order)
-// 			}
-
-// 		})
-// 	}
-// }
+			assert.Equal(t, tc.wantStatus, w.Code)
+			assert.Contains(t, w.Body.String(), tc.wantBody)
+			mockGetter.AssertExpectations(t)
+		})
+	}
+}
